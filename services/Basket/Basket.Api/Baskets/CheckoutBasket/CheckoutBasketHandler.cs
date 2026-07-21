@@ -1,5 +1,4 @@
 ﻿using BuildingBlocks.Messaging.Events;
-using JasperFx.Events.Daemon;
 using MassTransit;
 
 
