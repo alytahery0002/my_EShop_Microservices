@@ -1,0 +1,36 @@
+﻿using BuildingBlocks.Messaging.Events;
+using JasperFx.Events.Daemon;
+using MassTransit;
+
+
+namespace Basket.Api.Baskets.CheckoutBasket;
+
+public record CheckoutBasketCommand(BasketCheckoutDto BasketCheckoutDto) : ICommand<CheckoutBasketResult>;
+
+public record CheckoutBasketResult(bool IsSuccess);
+
+public class CheckoutBasketHandler
+    (IBasketRepository Repository, IPublishEndpoint publishEndpoint)
+    : ICommandHandler<CheckoutBasketCommand, CheckoutBasketResult>
+{
+    public async Task<CheckoutBasketResult> Handle(CheckoutBasketCommand command,CancellationToken cancellationToken) 
+    {
+        var basket = await Repository.GetBasket(command.BasketCheckoutDto.UserName);
+
+        if (basket == null)
+        {
+            return new CheckoutBasketResult(false);
+        }
+
+        var eventMessage = command.BasketCheckoutDto.Adapt<BasketCheckoutEvent>();
+ 
+
+        eventMessage.TotalPrice = basket.TotalPrice;
+
+        await publishEndpoint.Publish(eventMessage, cancellationToken);
+
+        await Repository.DeleteBasket(command.BasketCheckoutDto.UserName,cancellationToken);
+
+        return new CheckoutBasketResult(true);
+    }
+}
